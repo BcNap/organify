@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:organi/notes/notes_page.dart';
-import 'todo/todo_page.dart';
-import 'reminder/calendar_page.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'todo/todo_page.dart';
+import 'notes/notes_page.dart';
+import 'reminder/calendar_page.dart';
 
 void main() => runApp(MyApp());
 
@@ -12,31 +12,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Organify',
-      theme: ThemeData(
-        // Your theme data remains the same
-      ),
-      home: LandingPage(), // Directly set LandingPage as home
-    );
-  }
-}
-
-class LandingPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Use Future.delayed to navigate to MainPage after 0.3 seconds
-    Future.delayed(Duration(milliseconds: 300), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => MainPage(), // Navigate to MainPage
-        ),
-      );
-    });
-
-    // Return a simple scaffold with a centered loading indicator
-    return Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
+      home: MainPage(),
     );
   }
 }
@@ -48,7 +24,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
-  final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
+  bool _isDarkMode = false;
 
   final List<Widget> _widgetOptions = [
     TodoPage(),
@@ -56,31 +32,59 @@ class _MainPageState extends State<MainPage> {
     NotesPage(),
   ];
 
+  final List<String> _appBarTitles = [
+    'Tasks',
+    'Scheduler',
+    'Notes',
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
-      ),
-      bottomNavigationBar: CurvedNavigationBar(
-        key: _bottomNavigationKey,
-        index: _selectedIndex,
-        height: 60.0,
-        items: <Widget>[
-          Icon(Icons.list, size: 30, color: Colors.white),
-          Icon(Icons.calendar_today, size: 30, color: Colors.white),
-          Icon(Icons.note, size: 30, color: Colors.white),
-        ],
-        color: Color.fromARGB(255, 36, 35, 35), // Grey for the navigation bar background
-        buttonBackgroundColor: Color.fromARGB(255, 43, 148, 96), // Vibrant blue for the selected item background
-        backgroundColor: Colors.transparent, // Light grey for the navigation bar's inactive background
-        animationCurve: Curves.easeInOut,
-        animationDuration: Duration(milliseconds: 600),
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: _isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _appBarTitles[_selectedIndex], // Dynamically set the app bar title
+            style: TextStyle(
+              fontSize: 26, // Adjust the font size as needed
+              fontWeight: FontWeight.bold, // Make the text bold
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(_isDarkMode ? Icons.wb_sunny : Icons.nightlight_round),
+              onPressed: () {
+                setState(() {
+                  _isDarkMode = !_isDarkMode;
+                });
+              },
+            ),
+          ],
+        ),
+        body: Center(
+          child: _widgetOptions.elementAt(_selectedIndex),
+        ),
+        bottomNavigationBar: CurvedNavigationBar(
+          index: _selectedIndex,
+          height: 60.0,
+          items: <Widget>[
+            Icon(Icons.list, size: 30, color: Colors.white),
+            Icon(Icons.calendar_today, size: 30, color: Colors.white),
+            Icon(Icons.note, size: 30, color: Colors.white),
+          ],
+          color: _isDarkMode ? Color.fromARGB(255, 36, 35, 35) : Color.fromARGB(255, 36, 35, 35),
+          buttonBackgroundColor: Color.fromARGB(255, 43, 148, 96),
+          backgroundColor: Colors.transparent,
+          animationCurve: Curves.easeInOut,
+          animationDuration: Duration(milliseconds: 300),
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+        ),
       ),
     );
   }

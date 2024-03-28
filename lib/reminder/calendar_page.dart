@@ -9,6 +9,28 @@ class Reminder {
   Reminder({required this.text, this.time, required this.date});
 }
 
+class ReminderManager {
+  static final ReminderManager _instance = ReminderManager._internal();
+
+  factory ReminderManager() {
+    return _instance;
+  }
+
+  ReminderManager._internal();
+
+  final Map<DateTime, List<Reminder>> _reminders = {};
+
+  void addReminder(DateTime date, Reminder reminder) {
+    _reminders.putIfAbsent(date, () => []).add(reminder);
+  }
+
+  void deleteReminder(DateTime date, Reminder reminder) {
+    _reminders[date]?.remove(reminder);
+  }
+
+  Map<DateTime, List<Reminder>> get reminders => _reminders;
+}
+
 class CalendarPage extends StatefulWidget {
   @override
   _CalendarPageState createState() => _CalendarPageState();
@@ -18,7 +40,7 @@ class _CalendarPageState extends State<CalendarPage> {
   late DateTime _selectedDay;
   late DateTime _focusedDay;
   late CalendarFormat _calendarFormat;
-  Map<DateTime, List<Reminder>> _reminders = {};
+  final _reminderManager = ReminderManager();
 
   @override
   void initState() {
@@ -26,6 +48,28 @@ class _CalendarPageState extends State<CalendarPage> {
     _selectedDay = DateTime.now();
     _focusedDay = DateTime.now();
     _calendarFormat = CalendarFormat.month;
+    _addSampleReminders();
+  }
+
+  void _addSampleReminders() {
+    if (_reminderManager.reminders.isEmpty) {
+      _reminderManager.addReminder(
+        DateTime(2024, 3, 1),
+        Reminder(
+          text: 'Math quiz at 10:00 AM',
+          date: DateTime(2024, 3, 1),
+          time: TimeOfDay(hour: 10, minute: 00),
+        ),
+      );
+      _reminderManager.addReminder(
+        DateTime(2024, 3, 3),
+        Reminder(
+          text: 'History presentation at 2:00 PM',
+          date: DateTime(2024, 3, 3),
+          time: TimeOfDay(hour: 12, minute: 00),
+        ),
+      );
+    }
   }
 
   DateTime _normalizeDateTime(DateTime dateTime) {
@@ -84,12 +128,15 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
-  Widget _buildTimeSelector(TimeOfDay? selectedTime, Function(TimeOfDay) onTimeChanged) {
+  Widget _buildTimeSelector(
+      TimeOfDay? selectedTime, Function(TimeOfDay) onTimeChanged) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         TextButton(
-          child: Text(selectedTime != null ? "${selectedTime!.format(context)}" : "Select Time"),
+          child: Text(selectedTime != null
+              ? "${selectedTime!.format(context)}"
+              : "Select Time"),
           onPressed: () async {
             final pickedTime = await showTimePicker(
               context: context,
@@ -107,7 +154,7 @@ class _CalendarPageState extends State<CalendarPage> {
   void _saveReminder(DateTime date, String text, TimeOfDay? time) {
     final newReminder = Reminder(text: text, time: time, date: date);
     setState(() {
-      _reminders.putIfAbsent(date, () => []).add(newReminder);
+      _reminderManager.addReminder(date, newReminder);
     });
   }
 
@@ -146,7 +193,8 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   void _showEditReminderDialog(DateTime date, Reminder reminder) async {
-    TextEditingController _textFieldController = TextEditingController(text: reminder.text);
+    TextEditingController _textFieldController =
+        TextEditingController(text: reminder.text);
     TimeOfDay? selectedTime = reminder.time;
 
     await showDialog<String>(
@@ -178,7 +226,8 @@ class _CalendarPageState extends State<CalendarPage> {
               child: Text('Save'),
               onPressed: () {
                 if (_textFieldController.text.isNotEmpty) {
-                  _editReminder(date, reminder, _textFieldController.text, selectedTime);
+                  _editReminder(
+                      date, reminder, _textFieldController.text, selectedTime);
                   Navigator.pop(context);
                 }
               },
@@ -189,7 +238,8 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
-  void _editReminder(DateTime date, Reminder reminder, String newText, TimeOfDay? newTime) {
+  void _editReminder(
+      DateTime date, Reminder reminder, String newText, TimeOfDay? newTime) {
     setState(() {
       reminder.text = newText;
       reminder.time = newTime;
@@ -197,96 +247,132 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   void _deleteReminder(DateTime date, Reminder reminder) {
+    _reminderManager.deleteReminder(date, reminder);
     setState(() {
-      _reminders[date]!.remove(reminder);
+      if (_reminderManager.reminders[date]?.isEmpty ?? false) {
+        _reminderManager.reminders.remove(date);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Calendar')),
-      body: Column(
-        children: [
-          TableCalendar(
-            firstDay: DateTime.utc(2010, 10, 16),
-            lastDay: DateTime.utc(2030, 3, 14),
-            focusedDay: _focusedDay,
-            calendarFormat: _calendarFormat,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            onDaySelected: _onDaySelected,
-            calendarStyle: CalendarStyle(
-              defaultTextStyle: TextStyle(color: Colors.black), // Set default text color
-              selectedDecoration: BoxDecoration(
-                color: Color.fromARGB(255, 43, 148, 96),
-                shape: BoxShape.circle, // Make the shape a circle
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TableCalendar(
+              firstDay: DateTime.utc(2010, 10, 16),
+              lastDay: DateTime.utc(2030, 3, 14),
+              focusedDay: _focusedDay,
+              calendarFormat: _calendarFormat,
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              headerVisible: true, // Include header (Sun, Mon, Tue, etc.)
+              onDaySelected: _onDaySelected,
+              calendarStyle: CalendarStyle(
+                defaultTextStyle: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.light
+                      ? Colors.black
+                      :  Color.fromARGB(255, 43, 148, 96),
+                ),
+                selectedDecoration: BoxDecoration(
+                  color: Color.fromARGB(255, 43, 148, 96),
+                  shape: BoxShape.circle,
+                ),
+                weekendTextStyle: TextStyle(
+                  color: Colors.red, // Change weekend text color
+                  fontWeight: FontWeight.bold,
+                ),
+                outsideTextStyle: TextStyle(color: Colors.grey), // Change text color for dates outside the current month
+                outsideDaysVisible: false, // Hide days outside the current month
+                // Add background color
+                outsideDecoration: BoxDecoration(
+                  color:  Color.fromARGB(255, 43, 148, 96),
+                ),
+                weekendDecoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.light
+                      ? Colors.white
+                      : Colors.transparent,
+                ),
+                todayDecoration: BoxDecoration(
+                  color:  Color.fromARGB(255, 145, 65, 30),
+                  shape: BoxShape.circle
+                ),
+                markersMaxCount: 2, // Increase the maximum number of markers per day
               ),
+              onFormatChanged: (format) {
+                setState(() {
+                  _calendarFormat = format;
+                });
+              },
+              rowHeight: 40,
             ),
-            onFormatChanged: (format) {
-              setState(() {
-                _calendarFormat = format;
-              });
-            },
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _reminders.values.fold<int>(0, (previousValue, element) => previousValue + element.length),
-              itemBuilder: (context, index) {
-                int totalIndex = 0;
-                DateTime? date;
-                for (final entry in _reminders.entries) {
-                  if (totalIndex <= index && index < totalIndex + entry.value.length) {
-                    date = entry.key;
-                    break;
-                  }
-                  totalIndex += entry.value.length;
-                }
-
-                if (date == null) {
-                  return SizedBox.shrink(); // Skip if date is null
-                }
-
-                List<Reminder> reminders = _reminders[date]!;
-                int localIndex = index - totalIndex;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ListTile(
-                      title: Text(
-                        reminders[localIndex].text, // Make the title bold
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        reminders[localIndex].time != null
-                            ? '${reminders[localIndex].time!.hour}:${reminders[localIndex].time!.minute} ${reminders[localIndex].time!.period == DayPeriod.am ? 'AM' : 'PM'}'
-                            : 'No time specified',
-                      ),
-                      onTap: () {
-                        _showReminderOptionsDialog(date!, reminders[localIndex]);
-                      },
-                    ),
-                    if (localIndex == reminders.length - 1) // Add label only for the last reminder of the date
+            SizedBox(height: 20),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _reminderManager.reminders.length,
+                itemBuilder: (context, index) {
+                  final date = _reminderManager.reminders.keys.elementAt(index);
+                  final reminders = _reminderManager.reminders[date]!;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 4.0),
                         child: Text(
                           'Reminders for ${_formatDate(date)}',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-                    Divider(),
-                  ],
-                );
-              },
+                      if (reminders.isNotEmpty)
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: reminders.length,
+                          itemBuilder: (context, localIndex) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ListTile(
+                                  title: Text(
+                                    reminders[localIndex].text,
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  subtitle: Text(
+                                    reminders[localIndex].time != null
+                                        ? '${reminders[localIndex].time!.hour}:${reminders[localIndex].time!.minute} ${reminders[localIndex].time!.period == DayPeriod.am ? 'AM' : 'PM'}'
+                                        : 'No time specified',
+                                  ),
+                                  onTap: () {
+                                    _showReminderOptionsDialog(
+                                        date, reminders[localIndex]);
+                                  },
+                                ),
+                                Divider(),
+                              ],
+                            );
+                          },
+                        ),
+                      if (reminders.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text(
+                            'No reminders',
+                            style: TextStyle(fontStyle: FontStyle.italic),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-}
-
-void main() {
-  runApp(MaterialApp(
-    home: CalendarPage(),
-  ));
 }

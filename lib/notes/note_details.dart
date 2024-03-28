@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'note.dart'; // Assuming your Note class is in a file named note.dart
+import 'package:flutter/cupertino.dart';
 
 class NoteDetailPage extends StatefulWidget {
   final Note? note;
@@ -28,7 +29,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   }
 
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
@@ -38,7 +40,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   Future<bool> _onBackPressed() async {
     // Save the note and image path here
-    Navigator.pop(context, {'note': _noteController.text, 'image': _image?.path});
+    Navigator.pop(
+        context, {'note': _noteController.text, 'image': _image?.path});
     return true; // Return true to indicate that we have handled the back press
   }
 
@@ -55,46 +58,57 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 TextField(
                   controller: _noteController,
                   maxLines: null,
+                  style: TextStyle(color: Theme.of(context).textTheme.bodyText1!.color), // Text color based on theme
                   decoration: InputDecoration(
-                    hintText: 'Enter your note here...',
+                    hintText: '...',
                     border: InputBorder.none, // Removed border line
+                    hintStyle: TextStyle(color: Theme.of(context).hintColor), // Hint text color based on theme
                   ),
                 ),
                 SizedBox(height: 20),
-                _image != null ? Image.file(_image!) : SizedBox.shrink(), // Removed text 'No image selected.'
+                _image != null
+                    ? Image.file(_image!)
+                    : SizedBox.shrink(), // Removed text 'No image selected.'
               ],
             ),
           ),
         ),
         appBar: PreferredSize(
-          preferredSize: Size.fromHeight(kToolbarHeight + 10), // Adjust height as needed
+          preferredSize:
+              Size.fromHeight(kToolbarHeight + 10), // Adjust height as needed
           child: Container(
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: Colors.grey.withOpacity(0.5), // Adjust border color and opacity
+                  color: Theme.of(context).dividerColor, // Border color based on theme
                   width: 0.5, // Adjust border thickness
                 ),
               ),
             ),
             child: AppBar(
-              backgroundColor: Colors.white, // Set background color of AppBar
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Set background color of AppBar based on theme
               elevation: 0, // Remove AppBar elevation
               leading: IconButton(
                 icon: Icon(Icons.arrow_back),
+                color: Theme.of(context).iconTheme.color, // Icon color based on theme
                 onPressed: () {
                   _onBackPressed();
                 },
               ),
               actions: [
                 IconButton(
-                  icon: Icon(Icons.attach_file), // Changed camera icon to paper clip icon
+                  icon: Icon(CupertinoIcons.paperclip,
+                      size: 25), // Changed camera icon to paper clip icon
+                  color: Theme.of(context).iconTheme.color, // Icon color based on theme
                   onPressed: _pickImage,
                 ),
                 IconButton(
-                  icon: Icon(Icons.share), // Changed save icon to share icon like iOS
+                  icon: Icon(CupertinoIcons.share,
+                      size: 25), // Changed save icon to share icon like iOS
+                  color: Theme.of(context).iconTheme.color, // Icon color based on theme
                   onPressed: () {
-                    Navigator.pop(context, {'note': _noteController.text, 'image': _image?.path});
+                    Navigator.pop(context,
+                        {'note': _noteController.text, 'image': _image?.path});
                   },
                 ),
               ],
